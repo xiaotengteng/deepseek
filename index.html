@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DeepSeek AI助手</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --error: #dc2626;
+            --success: #16a34a;
+            --gray: #94a3b8;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: pan-y;
+        }
+        
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+        }
+        
+        /* 头部样式 */
+        .header {
+            padding: 12px 16px;
+            background-color: var(--card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .menu-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            margin-right: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 24px;
+            cursor: pointer;
+        }
+        
+        .menu-line {
+            width: 24px;
+            height: 2px;
+            background-color: var(--text);
+            transition: all 0.3s ease;
+        }
+        
+        .menu-open .menu-line:nth-child(1) {
+            transform: translateY(7px) rotate(45deg);
+        }
+        
+        .menu-open .menu-line:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .menu-open .menu-line:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+        
+        .title {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        /* 聊天区域 */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            padding-bottom: 80px;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .message {
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            background-color: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 18px 18px 4px 18px;
+            margin-left: 20%;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        
+        .assistant-message {
+            background-color: var(--card);
+            padding: 12px 16px;
+            border-radius: 18px 18px 18px 4px;
+            margin-right: 20%;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+        
+        /* 输入区域 */
+        .input-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 16px;
+            background-color: var(--card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        
+        #question-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            font-size: 16px;
+            min-height: 48px;
+            resize: none;
+            outline: none;
+        }
+        
+        #question-input:focus {
+            border-color: var(--primary);
+        }
+        
+        #submit-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            padding: 0 16px;
+            min-width: 64px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        #submit-btn:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        #submit-btn:disabled {
+            background-color: var(--gray);
+            cursor: not-allowed;
+        }
+        
+        /* 历史记录侧边栏 */
+        .history-sidebar {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 85%;
+            height: 100%;
+            background-color: var(--card);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .menu-open .history-sidebar {
+            transform: translateX(100%);
+        }
+        
+        .history-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-title {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .history-item {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .history-item:hover {
+            background-color: var(--bg);
+        }
+        
+        .history-item.active {
+            background-color: #e0e7ff;
+        }
+        
+        .history-content {
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .history-time {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 4px;
+        }
+        
+        .clear-history {
+            background: none;
+            border: none;
+            color: var(--primary);
+            padding: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        /* 加载状态 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .typing-indicator {
+            display: flex;
+            padding: 12px 16px;
+            background-color: var(--card);
+            border-radius: 18px 18px 18px 4px;
+            margin-right: 20%;
+            border: 1px solid var(--border);
+            width: 80px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--gray);
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+        }
+        
+        /* 错误提示 */
+        .error-message {
+            color: var(--error);
+            background-color: #fee2e2;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 480px) {
+            .user-message {
+                margin-left: 10%;
+            }
+            
+            .assistant-message {
+                margin-right: 10%;
+            }
+            
+            .history-sidebar {
+                width: 90%;
+            }
+            
+            #question-input {
+                font-size: 14px;
+                padding: 10px 14px;
+            }
+        }
+        
+        /* 暗黑模式支持 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1a1a1a;
+                --card: #2d2d2d;
+                --text: #f5f5f5;
+                --border: #444;
+                --gray: #777;
+            }
+            
+            .assistant-message {
+                background-color: #333;
+                border-color: #444;
+            }
+            
+            #question-input {
+                background-color: #333;
+                color: white;
+                border-color: #444;
+            }
+            
+            .history-item:hover {
+                background-color: #444;
+            }
+            
+            .history-item.active {
+                background-color: #3a4a6b;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 头部 -->
+        <div class="header">
+            <button class="menu-btn" id="menu-btn">
+                <span class="menu-line"></span>
+                <span class="menu-line"></span>
+                <span class="menu-line"></span>
+            </button>
+            <div class="title">DeepSeek AI助手</div>
+        </div>
+        
+        <!-- 聊天区域 -->
+        <div class="chat-area" id="chat-area"></div>
+        
+        <!-- 输入区域 -->
+        <div class="input-area">
+            <input type="text" id="question-input" placeholder="输入您的问题..." autocomplete="off">
+            <button id="submit-btn">发送</button>
+        </div>
+        
+        <!-- 历史记录侧边栏 -->
+        <div class="history-sidebar" id="history-sidebar">
+            <div class="history-header">
+                <div class="history-title">历史记录</div>
+                <button class="close-btn" id="close-btn">×</button>
+            </div>
+            <div class="history-list" id="history-list"></div>
+            <div style="padding: 16px; text-align: center;">
+                <button class="clear-history" id="clear-history">清空历史记录</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM元素
+            const chatArea = document.getElementById('chat-area');
+            const questionInput = document.getElementById('question-input');
+            const submitBtn = document.getElementById('submit-btn');
+            const menuBtn = document.getElementById('menu-btn');
+            const closeBtn = document.getElementById('close-btn');
+            const historySidebar = document.getElementById('history-sidebar');
+            const historyList = document.getElementById('history-list');
+            const clearHistoryBtn = document.getElementById('clear-history');
+            const app = document.getElementById('app');
+            
+            // API配置
+            const API_KEY = 'sk-0fdacce010e941389dd1ad0008504bed'; // 替换为你的API密钥
+            const API_ENDPOINT = 'https://api.deepseek.com/v1/chat/completions';
+            
+            // 状态变量
+            let conversations = JSON.parse(localStorage.getItem('deepseek_conversations')) || [];
+            let currentConversationId = null;
+            
+            // 初始化
+            initChat();
+            
+            // 事件监听
+            submitBtn.addEventListener('click', handleSubmit);
+            questionInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleSubmit();
+                }
+            });
+            
+            menuBtn.addEventListener('click', toggleHistorySidebar);
+            closeBtn.addEventListener('click', toggleHistorySidebar);
+            
+            // 触摸事件 - 滑动打开历史记录
+            let touchStartX = 0;
+            const swipeThreshold = 50;
+            
+            app.addEventListener('touchstart', function(e) {
+                touchStartX = e.touches[0].clientX;
+            });
+            
+            app.addEventListener('touchend', function(e) {
+                const touchEndX = e.changedTouches[0].clientX;
+                const deltaX = touchStartX - touchEndX;
+                
+                // 从左向右滑动打开历史记录
+                if (deltaX > swipeThreshold && touchStartX < 50) {
+                    showHistorySidebar();
+                }
+                
+                // 从右向左滑动关闭历史记录
+                if (deltaX < -swipeThreshold && touchStartX > window.innerWidth - 50) {
+                    hideHistorySidebar();
+                }
+            });
+            
+            clearHistoryBtn.addEventListener('click', clearAllHistory);
+            
+            // 初始化聊天
+            function initChat() {
+                renderHistoryList();
+                
+                // 如果有历史记录，加载最后一条
+                if (conversations.length > 0) {
+                    loadConversation(conversations[0].id);
+                } else {
+                    // 没有历史记录时显示欢迎消息
+                    addMessage('assistant', '你好！我是DeepSeek AI助手，有什么可以帮您的吗？');
+                }
+            }
+            
+            // 处理提交问题
+            async function handleSubmit() {
+                const question = questionInput.value.trim();
+                
+                if (!question) {
+                    return;
+                }
+                
+                // 禁用输入和按钮
+                questionInput.disabled = true;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="loading"></span>';
+                
+                // 添加用户消息
+                addMessage('user', question);
+                questionInput.value = '';
+                
+                // 如果是新对话，创建新的对话ID
+                if (!currentConversationId) {
+                    currentConversationId = Date.now().toString();
+                }
+                
+                // 获取当前对话
+                let currentConversation = conversations.find(c => c.id === currentConversationId);
+                
+                if (!currentConversation) {
+                    currentConversation = {
+                        id: currentConversationId,
+                        title: question.slice(0, 30),
+                        messages: [],
+                        timestamp: new Date().toISOString()
+                    };
+                    conversations.unshift(currentConversation);
+                }
+                
+                // 添加用户消息到对话历史
+                currentConversation.messages.push({
+                    role: 'user',
+                    content: question,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // 更新对话标题（使用第一个问题作为标题）
+                if (currentConversation.messages.length === 1) {
+                    currentConversation.title = question.slice(0, 30);
+                }
+                
+                // 显示AI正在输入
+                const typingIndicator = createTypingIndicator();
+                chatArea.appendChild(typingIndicator);
+                scrollToBottom();
+                
+                try {
+                    // 调用API
+                    const response = await callDeepSeekAPI(currentConversation.messages);
+                    const answer = response.choices[0].message.content;
+                    
+                    // 移除输入指示器
+                    chatArea.removeChild(typingIndicator);
+                    
+                    // 添加AI回复
+                    addMessage('assistant', answer);
+                    
+                    // 添加AI回复到对话历史
+                    currentConversation.messages.push({
+                        role: 'assistant',
+                        content: answer,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // 更新对话时间
+                    currentConversation.timestamp = new Date().toISOString();
+                    
+                    // 保存到本地存储
+                    saveConversations();
+                    
+                    // 更新历史记录列表
+                    renderHistoryList();
+                    
+                } catch (error) {
+                    console.error('API调用失败:', error);
+                    
+                    // 移除输入指示器
+                    if (typingIndicator.parentNode) {
+                        chatArea.removeChild(typingIndicator);
+                    }
+                    
+                    // 显示错误消息
+                    addErrorMessage(error.message || '请求失败，请稍后再试');
+                } finally {
+                    // 恢复输入和按钮状态
+                    questionInput.disabled = false;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '发送';
+                    questionInput.focus();
+                    
+                    // 滚动到底部
+                    scrollToBottom();
+                }
+            }
+            
+            // 调用DeepSeek API
+            async function callDeepSeekAPI(messages) {
+                const requestData = {
+                    model: "deepseek-chat",
+                    messages: messages.map(msg => ({
+                        role: msg.role,
+                        content: msg.content
+                    })),
+                    temperature: 0.7,
+                    max_tokens: 2000
+                };
+                
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || '请求失败');
+                }
+                
+                return await response.json();
+            }
+            
+            // 添加消息到聊天区域
+            function addMessage(role, content) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = role === 'user' ? 'user-message' : 'assistant-message';
+                contentDiv.textContent = content;
+                
+                // 长按复制功能
+                contentDiv.addEventListener('longpress', function() {
+                    copyToClipboard(content);
+                    showToast('已复制到剪贴板');
+                });
+                
+                // 移动端触摸事件模拟长按
+                let pressTimer;
+                
+                contentDiv.addEventListener('touchstart', function() {
+                    pressTimer = setTimeout(() => {
+                        copyToClipboard(content);
+                        showToast('已复制到剪贴板');
+                    }, 800); // 800毫秒视为长按
+                });
+                
+                contentDiv.addEventListener('touchend', function() {
+                    clearTimeout(pressTimer);
+                });
+                
+                contentDiv.addEventListener('touchmove', function() {
+                    clearTimeout(pressTimer);
+                });
+                
+                messageDiv.appendChild(contentDiv);
+                chatArea.appendChild(messageDiv);
+                
+                scrollToBottom();
+            }
+            
+            // 添加错误消息
+            function addErrorMessage(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                chatArea.appendChild(errorDiv);
+                
+                scrollToBottom();
+            }
+            
+            // 创建输入指示器
+            function createTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'typing-dot';
+                    typingDiv.appendChild(dot);
+                }
+                
+                return typingDiv;
+            }
+            
+            // 加载对话
+            function loadConversation(conversationId) {
+                const conversation = conversations.find(c => c.id === conversationId);
+                if (!conversation) return;
+                
+                currentConversationId = conversationId;
+                
+                // 清空聊天区域
+                chatArea.innerHTML = '';
+                
+                // 添加欢迎消息
+                if (conversation.messages.length > 0) {
+                    addMessage('assistant', '这是之前的对话记录，您可以继续提问。');
+                } else {
+                    addMessage('assistant', '这是一个新的对话。');
+                }
+                
+                // 添加历史消息
+                conversation.messages.forEach(message => {
+                    addMessage(message.role, message.content);
+                });
+                
+                // 更新历史记录列表的高亮状态
+                renderHistoryList();
+                
+                // 关闭历史记录侧边栏
+                hideHistorySidebar();
+                
+                // 聚焦到输入框
+                questionInput.focus();
+            }
+            
+            // 渲染历史记录列表
+            function renderHistoryList() {
+                historyList.innerHTML = '';
+                
+                if (conversations.length === 0) {
+                    historyList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--gray);">暂无历史记录</div>';
+                    return;
+                }
+                
+                conversations.forEach(conversation => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    if (conversation.id === currentConversationId) {
+                        historyItem.classList.add('active');
+                    }
+                    
+                    historyItem.innerHTML = `
+                        <div class="history-content">${conversation.title}</div>
+                        <div class="history-time">${formatTime(conversation.timestamp)}</div>
+                    `;
+                    
+                    historyItem.addEventListener('click', () => {
+                        loadConversation(conversation.id);
+                    });
+                    
+                    historyList.appendChild(historyItem);
+                });
+            }
+            
+            // 保存对话到本地存储
+            function saveConversations() {
+                localStorage.setItem('deepseek_conversations', JSON.stringify(conversations));
+            }
+            
+            // 清空所有历史记录
+            function clearAllHistory() {
+                if (confirm('确定要清空所有历史记录吗？此操作不可撤销。')) {
+                    conversations = [];
+                    currentConversationId = null;
+                    saveConversations();
+                    renderHistoryList();
+                    
+                    // 清空聊天区域
+                    chatArea.innerHTML = '';
+                    addMessage('assistant', '你好！我是DeepSeek AI助手，有什么可以帮您的吗？');
+                    
+                    // 关闭历史记录侧边栏
+                    hideHistorySidebar();
+                }
+            }
+            
+            // 切换历史记录侧边栏
+            function toggleHistorySidebar() {
+                app.classList.toggle('menu-open');
+                menuBtn.classList.toggle('menu-open');
+            }
+            
+            function showHistorySidebar() {
+                app.classList.add('menu-open');
+                menuBtn.classList.add('menu-open');
+            }
+            
+            function hideHistorySidebar() {
+                app.classList.remove('menu-open');
+                menuBtn.classList.remove('menu-open');
+            }
+            
+            // 辅助函数
+            function scrollToBottom() {
+                setTimeout(() => {
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }, 100);
+            }
+            
+            function formatTime(isoString) {
+                const date = new Date(isoString);
+                return date.toLocaleString();
+            }
+            
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text).catch(err => {
+                    console.error('复制失败:', err);
+                });
+            }
+            
+            function showToast(message) {
+                const toast = document.createElement('div');
+                toast.textContent = message;
+                toast.style.position = 'fixed';
+                toast.style.bottom = '100px';
+                toast.style.left = '50%';
+                toast.style.transform = 'translateX(-50%)';
+                toast.style.backgroundColor = 'rgba(0,0,0,0.7)';
+                toast.style.color = 'white';
+                toast.style.padding = '10px 20px';
+                toast.style.borderRadius = '20px';
+                toast.style.zIndex = '1000';
+                toast.style.animation = 'fadeInOut 2s';
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.remove();
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>
